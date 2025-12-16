@@ -1,47 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <style>
-    /* Ensure the body takes up the full screen and is black */
+   <style>
     body, html {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
       background: black;
-      /* The cursor indicates that the area is clickable */
       cursor: pointer; 
     }
-    /* The video is hidden by default */
     #scareVideo {
       display: none;
-      position: fixed; /* Helps ensure it covers the screen in all cases */
+      position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
     }
+    
+    /* This is the new part: Hide the video controls */
+    /* This targets the default video controls in WebKit browsers (Chrome, Safari) */
+    #scareVideo::-webkit-media-controls {
+      display: none !important;
+    }
+    /* This is a more general rule, which can help in other browsers */
+    #scareVideo::-moz-media-controls {
+        display: none !important;
+    }
+    video::-ms-media-controls {
+        display: none !important;
+    }
+    video::-o-media-controls {
+        display: none !important;
+    }
+    video {
+        pointer-events: none;
+    }
+
+
   </style>
 </head>
 <body>
 
+  <!-- Note: The 'controls' attribute is NOT present on the video tag -->
   <video id="scareVideo" loop>
     <source src="jumpscare.mp4" type="video/mp4">
     Your browser does not support the video tag.
   </video>
 
   <script>
-    // Get the body and video elements
     const pageBody = document.body;
     const video = document.getElementById('scareVideo');
 
-    // Listen for a single click anywhere on the page
     pageBody.addEventListener('click', () => {
-      // Show the video element
       video.style.display = 'block';
 
-      // Request to go into true fullscreen mode
-      // Note: We request fullscreen on the video element itself for best compatibility
       if (video.requestFullscreen) {
         video.requestFullscreen();
       } else if (video.webkitRequestFullscreen) { /* Safari */
@@ -50,10 +64,9 @@
         video.msRequestFullscreen();
       }
 
-      // Play the video (with sound, as this is a user-initiated action)
       video.play();
 
-    }, { once: true }); // { once: true } makes the event listener run only once and then remove itself.
+    }, { once: true });
   </script>
 
 </body>
