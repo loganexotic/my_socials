@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>⚠️ WARNING ⚠️</title>
+  <style>
+    body {
+      background: black;
+      color: red;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding-top: 100px;
+    }
+    button {
+      font-size: 24px;
+      padding: 15px 30px;
+      cursor: pointer;
+    }
+    video {
+      display: none;
+      width: 100%;
+      max-width: 1000px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>⚠️ WARNING ⚠️</h1>
+  <p>DO NOT CONTINUE IF YOU HAVE A HEART CONDITION</p>
+  <p>LOUD AUDIO • JUMPSCARE</p>
+
+  <button onclick="startScare()">I UNDERSTAND – CONTINUE</button>
+
+  <video id="scareVideo">
+    <source src="jumpscare.mp4" type="video/mp4">
+  </video>
+
+  <script>
+    function startScare() {
+      document.querySelector('button').style.display = 'none';
+      document.getElementById('scareVideo').style.display = 'block';
+      document.getElementById('scareVideo').play();
+    }
+  </script>
+
+</body>
+</html>
