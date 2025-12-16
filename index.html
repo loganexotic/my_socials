@@ -2,30 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Click to Enter</title>
+  <title>Enter</title>
   <style>
+    /* Ensure the body takes up the full screen and is black */
     body, html {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
       background: black;
-      color: white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-family: Arial, sans-serif;
+      /* The cursor indicates that the area is clickable */
+      cursor: pointer; 
     }
-    #enterButton {
-      font-size: 24px;
-      padding: 20px 40px;
-      cursor: pointer;
-      border: 2px solid white;
-      background: transparent;
-      color: white;
-    }
+    /* The video is hidden by default */
     #scareVideo {
-      display: none; /* Hidden until activated */
+      display: none;
+      position: fixed; /* Helps ensure it covers the screen in all cases */
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
     }
@@ -33,47 +27,35 @@
 </head>
 <body>
 
-  <button id="enterButton">Click to Enter</button>
-
   <video id="scareVideo" loop>
     <source src="jumpscare.mp4" type="video/mp4">
     Your browser does not support the video tag.
   </video>
 
   <script>
-    const enterButton = document.getElementById('enterButton');
+    // Get the body and video elements
+    const pageBody = document.body;
     const video = document.getElementById('scareVideo');
-    const body = document.documentElement; // Get the root html element
 
-    enterButton.addEventListener('click', () => {
-      // 1. Hide the button
-      enterButton.style.display = 'none';
-
-      // 2. Show the video
+    // Listen for a single click anywhere on the page
+    pageBody.addEventListener('click', () => {
+      // Show the video element
       video.style.display = 'block';
 
-      // 3. Request to go fullscreen
-      if (body.requestFullscreen) {
-        body.requestFullscreen();
-      } else if (body.webkitRequestFullscreen) { /* Safari */
-        body.webkitRequestFullscreen();
-      } else if (body.msRequestFullscreen) { /* IE11 */
-        body.msRequestFullscreen();
+      // Request to go into true fullscreen mode
+      // Note: We request fullscreen on the video element itself for best compatibility
+      if (video.requestFullscreen) {
+        video.requestFullscreen();
+      } else if (video.webkitRequestFullscreen) { /* Safari */
+        video.webkitRequestFullscreen();
+      } else if (video.msRequestFullscreen) { /* IE11 */
+        video.msRequestFullscreen();
       }
 
-      // 4. Play the video (now with sound)
+      // Play the video (with sound, as this is a user-initiated action)
       video.play();
-    });
 
-    // Optional: Listen for when the user exits fullscreen
-    document.addEventListener('fullscreenchange', () => {
-      // If the user is no longer in fullscreen, stop the video and show the button again
-      if (!document.fullscreenElement) {
-        video.pause();
-        video.style.display = 'none';
-        enterButton.style.display = 'block';
-      }
-    });
+    }, { once: true }); // { once: true } makes the event listener run only once and then remove itself.
   </script>
 
 </body>
